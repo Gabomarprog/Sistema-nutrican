@@ -40,6 +40,10 @@ def init_db():
     conn.commit()
     conn.close()
 
+# --- CORRECCIÓN: ESTA LÍNEA CREA LA BASE DE DATOS EN RENDER ---
+init_db()
+# --------------------------------------------------------------
+
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -169,26 +173,22 @@ def descargar_pdf(id_factura):
     datos = c.fetchone()
     conn.close()
     
-    # Renderizamos pasando el flag is_pdf=True
     html = render_template('factura.html', f=datos, is_pdf=True)
     
-    # --- LA MAGIA ESTÁ AQUÍ ---
-    if os.name == 'nt':  # Si estás en tu PC (Windows) usa tu ruta manual
+    if os.name == 'nt':
         ruta_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
         config = pdfkit.configuration(wkhtmltopdf=ruta_wkhtmltopdf)
         pdf = pdfkit.from_string(html, False, configuration=config)
-    else:  # Si estás en Render u otro servidor (Linux), confía en el sistema
+    else:
         try:
             pdf = pdfkit.from_string(html, False)
         except Exception as e:
             return "El servidor no tiene soporte para PDF todavía. Por favor, imprime la pantalla.", 500
-    # ---------------------------
-    
+            
     response = make_response(pdf)
     response.headers['Content-Type'] = 'application/pdf'
     response.headers['Content-Disposition'] = f'attachment; filename=Factura_{id_factura}.pdf'
     return response
 
 if __name__ == '__main__':
-    init_db()
     app.run(debug=True, port=5000)

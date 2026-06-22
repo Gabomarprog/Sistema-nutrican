@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Panel de Resumen Gerencial{% endblock %}
+
+{% block content %}
+<div style="display: flex; gap: 20px; margin-bottom: 30px;">
+    <div class="card" style="flex: 1; border-left: 5px solid #2563eb;">
+        <h3 style="margin-top:0; color:#64748b;">Sacos en Stock</h3>
+        <p style="font-size: 32px; font-weight: bold; color: #0f172a; margin:0;">{{ stock }} uds.</p>
+    </div>
+    <div class="card" style="flex: 1; border-left: 5px solid #10b981;">
+        <h3 style="margin-top:0; color:#64748b;">Ingresos Totales</h3>
+        <p style="font-size: 32px; font-weight: bold; color: #10b981; margin:0;">${{ "%.2f"|format(ventas) }}</p>
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="margin-top:0; color:#334155;">Historial de Movimientos</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Lote</th>
+                <th>Cantidad</th>
+                <th>Total</th>
+                <th>Detalles</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for mov in movimientos %}
+            <tr>
+                <td>{{ mov[8] }}</td>
+                <td>
+                    <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; 
+                    background: {{ '#dcfce7' if mov[3] == 'Salida' else '#dbeafe' }}; 
+                    color: {{ '#166534' if mov[3] == 'Salida' else '#1e40af' }}">
+                        {{ mov[3] }}
+                    </span>
+                </td>
+                <td>{{ mov[2] }}</td>
+                <td>{{ mov[5] }}</td>
+                <td>${{ "%.2f"|format(mov[7]) }}</td>
+                <td>{{ mov[9] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

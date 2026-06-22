@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Abastecimiento de Stock{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 600px;">
+    <form method="POST">
+        <label>ID del Lote (Solo números):</label>
+        <input type="number" name="id_lote" min="1" step="1" required>
+        
+        <label>Producto:</label>
+        <input type="text" name="producto" value="Perrarina Saco 20Kg" required>
+        
+        <div style="display: flex; gap: 15px;">
+            <div style="flex: 1;">
+                <label>Cantidad:</label>
+                <input type="number" name="cantidad" min="1" required>
+            </div>
+            <div style="flex: 1;">
+                <label>Costo Unitario ($):</label>
+                <input type="number" step="0.01" name="precio_unidad" required>
+            </div>
+        </div>
+        
+        <label>Observaciones:</label>
+        <input type="text" name="descripcion" placeholder="Notas">
+        
+        <button type="submit" class="btn-blue">REGISTRAR ENTRADA</button>
+    </form>
+</div>
+{% endblock %}

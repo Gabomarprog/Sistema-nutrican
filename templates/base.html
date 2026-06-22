@@ -1,0 +1,73 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>NUTRICAN Premium C.A. - ERP</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: #f1f5f9; display: flex; height: 100vh; }
+        
+        /* BARRA LATERAL (SIDEBAR) */
+        .sidebar { width: 260px; background-color: #0f172a; color: white; display: flex; flex-direction: column; }
+        .logo { padding: 25px 20px; font-size: 22px; font-weight: bold; border-bottom: 1px solid #1e293b; color: #facc15; }
+        .logo span { color: white; font-size: 14px; display: block; font-weight: normal; margin-top: 5px; }
+        .menu { list-style: none; padding: 0; margin: 20px 0; }
+        .menu li { margin-bottom: 5px; }
+        .menu a { display: block; color: #cbd5e1; text-decoration: none; padding: 15px 25px; transition: 0.3s; }
+        .menu a:hover { background-color: #1e293b; color: white; border-left: 4px solid #facc15; }
+        .logout { margin-top: auto; padding: 20px; text-align: center; background: #b91c1c; color: white; text-decoration: none; font-weight: bold; transition: 0.3s;}
+        .logout:hover { background: #991b1b; }
+        
+        /* CONTENIDO CENTRAL */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .top-bar { background: white; padding: 20px 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .content-area { padding: 30px; }
+        
+        /* ESTILOS GLOBALES DE FORMULARIOS Y TABLAS */
+        .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        input, select { width: 100%; padding: 10px; margin: 8px 0 20px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
+        button { padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; font-size: 14px; width: 100%; }
+        .btn-blue { background-color: #2563eb; } .btn-blue:hover { background-color: #1d4ed8; }
+        .btn-green { background-color: #10b981; } .btn-green:hover { background-color: #059669; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th, td { padding: 15px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+        th { background-color: #f8fafc; color: #475569; text-transform: uppercase; font-size: 12px; }
+        .alert { padding: 15px; border-radius: 4px; margin-bottom: 20px; font-weight: bold; }
+        .alert-error { background-color: #fee2e2; color: #b91c1c; }
+        .alert-success { background-color: #d1fae5; color: #047857; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo">NUTRICAN<br><span>Premium C.A.</span></div>
+        <ul class="menu">
+            <li><a href="/dashboard">📊 Panel de Resumen</a></li>
+            <li><a href="/entradas">📦 Registrar Entrada (Lotes)</a></li>
+            <li><a href="/salidas">🛒 Registrar Venta (Facturación)</a></li>
+            <li><a href="/inventario">📋 Consultar Inventario</a></li>
+        </ul>
+        <a href="/logout" class="logout">Cerrar Sesión</a>
+    </div>
+
+    <div class="main-content">
+        <div class="top-bar">
+            <h2 style="margin:0; color:#334155;">{% block title %}{% endblock %}</h2>
+            <div>Usuario Activo: <strong>{{ usuario }}</strong></div>
+        </div>
+        
+        <div class="content-area">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+</body>
+</html>

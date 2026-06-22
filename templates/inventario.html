@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Catálogo de Lotes Activos{% endblock %}
+
+{% block content %}
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Código de Lote</th>
+                <th>Producto</th>
+                <th>Stock Físico</th>
+                <th>Costo Unitario</th>
+                <th>Fecha de Ingreso</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for lote in lotes %}
+            <tr>
+                <td><strong>{{ lote[0] }}</strong></td>
+                <td>{{ lote[1] }}</td>
+                <td style="color: #2563eb; font-weight: bold;">{{ lote[2] }} sacos</td>
+                <td>${{ "%.2f"|format(lote[3]) }}</td>
+                <td>{{ lote[4] }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" style="text-align: center; padding: 30px;">Inventario vacío. No hay lotes registrados.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

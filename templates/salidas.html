@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Punto de Venta / Salida FIFO{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 600px;">
+    <form method="POST">
+        <label>Seleccionar Lote a descargar (FIFO):</label>
+        <select name="id_lote" required>
+            <option value="">-- Seleccione el lote más antiguo --</option>
+            {% for lote in lotes %}
+                <option value="{{ lote[0] }}">{{ lote[1] }} | Lote: {{ lote[0] }} | Quedan: {{ lote[2] }} sacos</option>
+            {% endfor %}
+        </select>
+        
+        <div style="display: flex; gap: 15px;">
+            <div style="flex: 1;">
+                <label>Sacos a vender:</label>
+                <input type="number" name="cantidad" min="1" required>
+            </div>
+            <div style="flex: 1;">
+                <label>Precio de Venta (Por Unidad $):</label>
+                <input type="number" step="0.01" name="precio_unidad" required>
+            </div>
+        </div>
+        
+        <label>Datos del Cliente / Facturación:</label>
+        <input type="text" name="descripcion" placeholder="Nombre del cliente o C.I." required>
+        
+        <button type="submit" class="btn-green">PROCESAR VENTA Y GENERAR FACTURA</button>
+    </form>
+</div>
+{% endblock %}

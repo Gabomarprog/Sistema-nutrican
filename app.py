@@ -172,9 +172,17 @@ def descargar_pdf(id_factura):
     # Renderizamos pasando el flag is_pdf=True
     html = render_template('factura.html', f=datos, is_pdf=True)
     
-    ruta_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
-    config = pdfkit.configuration(wkhtmltopdf=ruta_wkhtmltopdf)
-    pdf = pdfkit.from_string(html, False, configuration=config)
+    # --- LA MAGIA ESTÁ AQUÍ ---
+    if os.name == 'nt':  # Si estás en tu PC (Windows) usa tu ruta manual
+        ruta_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+        config = pdfkit.configuration(wkhtmltopdf=ruta_wkhtmltopdf)
+        pdf = pdfkit.from_string(html, False, configuration=config)
+    else:  # Si estás en Render u otro servidor (Linux), confía en el sistema
+        try:
+            pdf = pdfkit.from_string(html, False)
+        except Exception as e:
+            return "El servidor no tiene soporte para PDF todavía. Por favor, imprime la pantalla.", 500
+    # ---------------------------
     
     response = make_response(pdf)
     response.headers['Content-Type'] = 'application/pdf'

@@ -3,28 +3,69 @@
 {% block title %}Panel de Resumen Gerencial{% endblock %}
 
 {% block content %}
-<div style="display: flex; gap: 20px; margin-bottom: 30px;">
-    <div class="card" style="flex: 1; border-left: 5px solid #2563eb;">
-        <h3 style="margin-top:0; color:#64748b;">Sacos en Stock</h3>
-        <p style="font-size: 32px; font-weight: bold; color: #0f172a; margin:0;">{{ stock }} uds.</p>
+<style>
+    /* Oculta la barra de scroll de la pantalla principal de forma absoluta */
+    html, body {
+        overflow-y: hidden !important;
+    }
+
+    /* Estructura rígida para la tabla */
+    .tabla-perfecta {
+        table-layout: fixed !important;
+        width: 100% !important;
+        border-collapse: collapse;
+    }
+
+    /* Reducimos el alto de las filas a 34px y el tamaño de letra a 13px para ganar espacio */
+    .tabla-perfecta th, .tabla-perfecta td {
+        padding: 6px 8px !important; 
+        height: 34px !important;     
+        box-sizing: border-box;
+        vertical-align: middle;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        font-size: 13px;
+    }
+
+    /* Reducimos el tamaño de las tarjetas superiores para que no empujen la tabla */
+    .tarjeta-compacta {
+        padding: 10px 15px !important;
+    }
+    .tarjeta-compacta h3 {
+        margin: 0 0 2px 0 !important; 
+        color: #64748b; 
+        font-size: 0.95em !important;
+    }
+    .tarjeta-compacta p {
+        font-size: 26px !important; 
+        font-weight: bold; 
+        margin: 0 !important;
+    }
+</style>
+
+<div style="display: flex; gap: 15px; margin-bottom: 10px;">
+    <div class="card tarjeta-compacta" style="flex: 1; border-left: 5px solid #2563eb;">
+        <h3>Sacos en Stock</h3>
+        <p style="color: #0f172a;">{{ stock }} uds.</p>
     </div>
-    <div class="card" style="flex: 1; border-left: 5px solid #10b981;">
-        <h3 style="margin-top:0; color:#64748b;">Ingresos Totales</h3>
-        <p style="font-size: 32px; font-weight: bold; color: #10b981; margin:0;">${{ "%.2f"|format(ventas) }}</p>
+    <div class="card tarjeta-compacta" style="flex: 1; border-left: 5px solid #10b981;">
+        <h3>Ingresos Totales</h3>
+        <p style="color: #10b981;">${{ "%.2f"|format(ventas) }}</p>
     </div>
 </div>
 
-<div class="card">
-    <h3 style="margin-top:0; color:#334155;">Historial de Movimientos</h3>
-    <table>
+<div class="card" style="padding: 12px;">
+    <h3 style="margin-top:0; margin-bottom: 8px; color:#334155; font-size: 1.05em;">Historial de Movimientos</h3>
+    <table class="tabla-perfecta">
         <thead>
             <tr>
-                <th>Fecha</th>
-                <th>Tipo</th>
-                <th>Lote</th>
-                <th>Cantidad</th>
-                <th>Total</th>
-                <th>Detalles</th>
+                <th style="width: 18%;">Fecha</th>
+                <th style="width: 10%;">Tipo</th>
+                <th style="width: 12%;">Lote</th>
+                <th style="width: 12%;">Cantidad</th>
+                <th style="width: 13%;">Total</th>
+                <th style="width: 35%;">Detalles</th>
             </tr>
         </thead>
         <tbody>
@@ -32,19 +73,38 @@
             <tr>
                 <td>{{ mov[8] }}</td>
                 <td>
-                    <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; 
-                    background: {{ '#dcfce7' if mov[3] == 'Salida' else '#dbeafe' }}; 
-                    color: {{ '#166534' if mov[3] == 'Salida' else '#1e40af' }}">
-                        {{ mov[3] }}
-                    </span>
+                    <span style="padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; 
+    background: {{ '#dcfce7' if mov[3] == 'Salida' else ('#fecaca' if mov[3] == 'Devolución' else '#dbeafe') }}; 
+    color: {{ '#166534' if mov[3] == 'Salida' else ('#991b1b' if mov[3] == 'Devolución' else '#1e40af') }}">
+    {{ mov[3] }}
+</span>
                 </td>
                 <td>{{ mov[2] }}</td>
                 <td>{{ mov[5] }}</td>
                 <td>${{ "%.2f"|format(mov[7]) }}</td>
-                <td>{{ mov[9] }}</td>
+                
+                <td title="{% if mov[3] == 'Salida' %}Se vendió a {{ mov[9] }}{% else %}{{ mov[9] }}{% endif %}">
+                    {% if mov[3] == 'Salida' %}
+                        Se vendió a {{ mov[9] }}
+                    {% else %}
+                        {{ mov[9] }}
+                    {% endif %}
+                </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+    
+    <div style="margin-top: 8px; text-align: right; font-size: 13px;">
+        {% if page > 1 %}
+            <a href="{{ url_for('dashboard', page=page-1) }}" style="padding: 4px 10px; background: #e2e8f0; border-radius: 4px; text-decoration: none; color: #334155; font-weight: bold;">&laquo; Anterior</a>
+        {% endif %}
+        
+        <span style="margin: 0 15px; color: #64748b; font-weight: bold;">Página {{ page }} de {{ total_pages }}</span>
+        
+        {% if page < total_pages %}
+            <a href="{{ url_for('dashboard', page=page+1) }}" style="padding: 4px 10px; background: #e2e8f0; border-radius: 4px; text-decoration: none; color: #334155; font-weight: bold;">Siguiente &raquo;</a>
+        {% endif %}
+    </div>
 </div>
 {% endblock %}

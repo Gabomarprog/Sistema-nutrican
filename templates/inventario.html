@@ -1,31 +1,196 @@
 {% extends "base.html" %}
+
 {% block title %}Catálogo de Lotes Activos{% endblock %}
 
 {% block content %}
-<div class="card">
-    <table>
+<style>
+    /* Oculta la barra de scroll de la pantalla de forma absoluta */
+    html, body {
+        overflow-y: hidden !important;
+    }
+
+    /* Estructura rígida para la tabla idéntica al dashboard */
+    .tabla-perfecta {
+        table-layout: fixed !important;
+        width: 100% !important;
+        border-collapse: collapse;
+    }
+
+    /* Filas con alto de 34px y letra de 13px para calcar el diseño */
+    .tabla-perfecta th, .tabla-perfecta td {
+        padding: 6px 8px !important; 
+        height: 34px !important;     
+        box-sizing: border-box;
+        vertical-align: middle;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        font-size: 13px;
+    }
+
+    /* Tarjetas superiores idénticas para mantener la misma estructura */
+    .tarjeta-compacta {
+        padding: 10px 15px !important;
+    }
+    .tarjeta-compacta h3 {
+        margin: 0 0 2px 0 !important; 
+        color: #64748b; 
+        font-size: 0.95em !important;
+    }
+    .tarjeta-compacta p {
+        font-size: 26px !important; 
+        font-weight: bold; 
+        margin: 0 !important;
+    }
+
+    
+
+    /* Estilo del botón */
+    .btn-devolver {
+        background-color: #ff9800; /* Naranja vibrante */
+        color: white;
+        border: none;
+        padding: 3px 12px; /* Más pequeño para no estirar la fila */
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: bold;
+    }
+    .btn-devolver:hover { background-color: #e68900; }
+
+    /* Estilo de la tabla para quitar el exceso de grosor */
+    table { width: 100%; border-collapse: collapse; }
+    td, th { padding: 8px 10px; } /* Espaciado reducido para que no sea tan alta */
+    
+    /* El Modal (Capa fija) */
+    .modal-fondo {
+        display: none; position: fixed; z-index: 1000;
+        left: 0; top: 0; width: 100%; height: 100%;
+        background-color: rgba(0,0,0,0.5);
+    }
+    .modal-contenido {
+        background-color: white; margin: 10% auto; padding: 20px;
+        width: 350px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    /* Botón Cancelar */
+    .btn-cancelar {
+        background-color: #f8f9fa;
+        color: #333;
+        border: 1px solid #ced4da;
+        padding: 8px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    .btn-cancelar:hover { background-color: #e2e6ea; }
+
+    /* Botón Confirmar */
+    .btn-confirmar {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    .btn-confirmar:hover { background-color: #c82333; }
+
+
+    
+</style>
+
+<div style="display: flex; gap: 15px; margin-bottom: 10px;">
+    <div class="card tarjeta-compacta" style="flex: 1; border-left: 5px solid #2563eb;">
+        <h3>Sacos en Stock</h3>
+        <p style="color: #0f172a;">{{ stock }} uds.</p>
+    </div>
+    <div class="card tarjeta-compacta" style="flex: 1; border-left: 5px solid #10b981;">
+        <h3>Ingresos Totales</h3>
+        <p style="color: #10b981;">${{ "%.2f"|format(ventas) }}</p>
+    </div>
+</div>
+
+<div class="card" style="padding: 12px;">
+    <h3 style="margin-top:0; margin-bottom: 8px; color:#334155; font-size: 1.05em;">Catálogo de Lotes Activos</h3>
+    <table class="tabla-perfecta">
         <thead>
             <tr>
-                <th>Código de Lote</th>
-                <th>Producto</th>
-                <th>Stock Físico</th>
-                <th>Costo Unitario</th>
-                <th>Fecha de Ingreso</th>
+                <th style="width: 18%;">Código de Lote</th>
+                <th style="width: 32%;">Producto</th>
+                <th style="width: 18%;">Stock Físico</th>
+                <th style="width: 14%;">Costo Unitario</th>
+                <th style="width: 18%;">Fecha de Ingreso</th>
+                <th style="width: 18%;">Acción</th>
             </tr>
         </thead>
         <tbody>
             {% for lote in lotes %}
             <tr>
                 <td><strong>{{ lote[0] }}</strong></td>
-                <td>{{ lote[1] }}</td>
+                <td title="{{ lote[1] }}">{{ lote[1] }}</td>
                 <td style="color: #2563eb; font-weight: bold;">{{ lote[2] }} sacos</td>
                 <td>${{ "%.2f"|format(lote[3]) }}</td>
                 <td>{{ lote[4] }}</td>
+                <td>
+    <button class="btn-devolver" onclick="prepararDevolucion('{{ lote[0] }}', {{ lote[2] }})">
+        Devolver
+    </button>
+</td>
             </tr>
             {% else %}
-            <tr><td colspan="5" style="text-align: center; padding: 30px;">Inventario vacío. No hay lotes registrados.</td></tr>
+            <tr>
+                <td colspan="5" style="text-align: center; color: #64748b;">Inventario vacío. No hay lotes registrados.</td>
+            </tr>
             {% endfor %}
         </tbody>
     </table>
+    
+    <div style="margin-top: 8px; text-align: right; font-size: 13px;">
+        {% if page > 1 %}
+            <a href="{{ url_for('inventario', page=page-1) }}" style="padding: 4px 10px; background: #e2e8f0; border-radius: 4px; text-decoration: none; color: #334155; font-weight: bold;">&laquo; Anterior</a>
+        {% endif %}
+        
+        <span style="margin: 0 15px; color: #64748b; font-weight: bold;">Página {{ page }} de {{ total_pages }}</span>
+        
+        {% if page < total_pages %}
+            <a href="{{ url_for('inventario', page=page+1) }}" style="padding: 4px 10px; background: #e2e8f0; border-radius: 4px; text-decoration: none; color: #334155; font-weight: bold;">Siguiente &raquo;</a>
+        {% endif %}
+    </div>
 </div>
+
+<div id="modalDevolucion" class="modal-fondo">
+    <div class="modal-contenido">
+    <h3>Devolución de Lote</h3>
+    <form action="/procesar_devolucion" method="POST">
+        <input type="hidden" name="id_lote" id="input_id_lote">
+        
+        <label>Cantidad:</label>
+        <input type="number" name="cantidad" required min="1" id="input_max_qty" style="width: 90%; margin-bottom: 10px;">
+        
+        <label>Motivo:</label>
+        <textarea name="motivo" required style="width: 90%; margin-bottom: 10px; height: 60px;"></textarea>
+        
+        <div style="text-align: right;">
+            <button type="button" onclick="cerrarModal()" class="btn-cancelar">Cancelar</button>
+            <button type="submit" class="btn-confirmar">Confirmar</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    function prepararDevolucion(id, maxQty) {
+        document.getElementById('input_id_lote').value = id;
+        document.getElementById('input_max_qty').value = maxQty;
+        document.getElementById('input_max_qty').max = maxQty;
+        // Mostramos el modal cambiando el display a block
+        document.getElementById('modalDevolucion').style.display = 'block';
+    }
+
+    function cerrarModal() {
+        // Ocultamos el modal
+        document.getElementById('modalDevolucion').style.display = 'none';
+    }
+</script>
 {% endblock %}

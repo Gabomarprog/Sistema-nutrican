@@ -1,58 +1,303 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <title>NUTRICAN Premium C.A. - ERP</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: #f1f5f9; display: flex; height: 100vh; }
+        /* ==========================================
+           ESTILOS GLOBALES
+           ========================================== */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            background-color: #f1f5f9; 
+            display: flex; 
+            height: 100vh; 
+            color: #1A1A1A;
+        }
         
-        /* BARRA LATERAL (SIDEBAR) */
-        .sidebar { width: 260px; background-color: #0f172a; color: white; display: flex; flex-direction: column; }
-        .logo { padding: 25px 20px; font-size: 22px; font-weight: bold; border-bottom: 1px solid #1e293b; color: #facc15; }
-        .logo span { color: white; font-size: 14px; display: block; font-weight: normal; margin-top: 5px; }
-        .menu { list-style: none; padding: 0; margin: 20px 0; }
+        /* ==========================================
+           SIDEBAR (MENÚ LATERAL) - TEMÁTICA LOGIN
+           ========================================== */
+        .sidebar { 
+            width: 260px; 
+            background-color: #FFFFFF; 
+            border-right: 1px solid #E5E7EB; 
+            display: flex; 
+            flex-direction: column; 
+            flex-shrink: 0;
+            position: relative;
+        }
+        
+        .logo { 
+            padding: 25px 20px; 
+            font-size: 22px; 
+            font-weight: 800; 
+            border-bottom: 1px solid #E5E7EB;
+            color: #1A1A1A; 
+            letter-spacing: 1px;
+        }
+        .logo span { 
+            color: #8B8D96; 
+            font-size: 14px; 
+            display: block; 
+            font-weight: normal; 
+            margin-top: 5px; 
+            letter-spacing: normal;
+        }
+        
+        .menu { 
+            list-style: none; 
+            padding: 15px 0; 
+            margin: 0; 
+            flex: 1;
+        }
         .menu li { margin-bottom: 5px; }
-        .menu a { display: block; color: #cbd5e1; text-decoration: none; padding: 15px 25px; transition: 0.3s; }
-        .menu a:hover { background-color: #1e293b; color: white; border-left: 4px solid #facc15; }
-        .logout { margin-top: auto; padding: 20px; text-align: center; background: #b91c1c; color: white; text-decoration: none; font-weight: bold; transition: 0.3s;}
-        .logout:hover { background: #991b1b; }
+        .menu a { 
+            display: flex; 
+            align-items: center; 
+            color: #8B8D96; 
+            text-decoration: none; 
+            padding: 12px 20px;
+            margin: 4px 10px;
+            border-radius: 8px; 
+            transition: all 0.3s ease; 
+        }
+        .menu a svg, .logout svg {
+            width: 20px; 
+            height: 20px; 
+            margin-right: 12px;
+            color: #8B8D96;
+            transition: color 0.3s ease;
+        }
         
-        /* CONTENIDO CENTRAL */
-        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
-        .top-bar { background: white; padding: 20px 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .content-area { padding: 30px; }
+        .menu a:hover, .menu a.active { 
+            background-color: #EFF4FA; 
+            color: #1A7BDA; 
+        }
+        .menu a:hover svg, .menu a.active svg {
+            color: #1A7BDA; 
+        }
         
-        /* ESTILOS GLOBALES DE FORMULARIOS Y TABLAS */
-        .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        input, select { width: 100%; padding: 10px; margin: 8px 0 20px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
-        button { padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; font-size: 14px; width: 100%; }
-        .btn-blue { background-color: #2563eb; } .btn-blue:hover { background-color: #1d4ed8; }
-        .btn-green { background-color: #10b981; } .btn-green:hover { background-color: #059669; }
-        table { width: 100%; border-collapse: collapse; background: white; }
+        /* ==========================================
+           BOTÓN CERRAR SESIÓN ANCLADO AL FONDO
+           ========================================== */
+        .logout { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            margin: 20px !important; 
+            padding: 12px 15px !important;
+            border-radius: 8px !important;
+            border: 1px solid #E5E7EB !important;
+            background-color: #FFFFFF !important; 
+            color: #1A7BDA !important; 
+            text-decoration: none !important; 
+            font-weight: 600 !important;
+            transition: all 0.3s ease;
+            width: auto !important;
+        }
+        .logout svg {
+            width: 18px; 
+            height: 18px; 
+            margin-right: 8px;
+            color: #8B8D96;
+        }
+        .logout:hover { 
+            background-color: #EFF4FA !important; 
+            border-color: #1A7BDA !important;
+            color: #155EB8 !important; 
+        }
+        .logout:hover svg {
+            color: #1A7BDA !important;
+        }
+        
+        /* ==========================================
+           CONTENIDO CENTRAL Y FORMULARIOS
+           ========================================== */
+        .main-content { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            overflow-y: auto; 
+        }
+        
+        .top-bar { 
+            background: white; 
+            padding: 20px 30px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .top-bar h2 { margin: 0; color: #334155; }
+        
+        .content-area { 
+            padding: 30px; 
+            display: block; 
+        }
+        
+        /* TARJETAS */
+        .card { 
+            background: white; 
+            padding: 25px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+            margin-bottom: 20px; 
+            width: auto; 
+            box-sizing: border-box;
+        }
+        .form-card {
+            max-width: 650px; 
+            margin: 0 auto;   
+            padding: 40px;    
+        }
+        
+        /* INPUTS */
+        input, select, textarea { 
+            width: 100%; 
+            padding: 12px; 
+            margin-bottom: 20px; 
+            border: 1px solid #d0dbdd; 
+            border-radius: 6px; 
+            box-sizing: border-box; 
+            font-family: inherit;
+            background-color: #FFFFFF;
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: #1A7BDA;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(26, 123, 218, 0.1);
+        }
+        
+        /* ==========================================
+           BOTONES DE ACCIÓN (TUS CLASES ORIGINALES RESTAURADAS)
+           ========================================== */
+        /* Estilo por defecto para botones comunes */
+        button, input[type="submit"] { 
+            padding: 14px 20px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            color: white; 
+            font-size: 14px; 
+            width: 100%; 
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+        
+        /* TUS CLASES ORIGINALES (Sin cambios, tal como las tenías) */
+        .btn-blue { background-color: #2563eb; } 
+        .btn-blue:hover:not(:disabled) { background-color: #1d4ed8; }
+        
+        .btn-green { background-color: #10b981; } 
+        .btn-green:hover:not(:disabled) { background-color: #059669; }
+
+        /* 👇 CORRECCIÓN PARA QUE EL BOTÓN DESHABILITADO SE VEA GRIS (YA NO BLANCO) 👇 */
+        button:disabled, button.disabled, input[type="submit"]:disabled {
+            background-color: #94A3B8 !important; /* Gris azulado visible */
+            color: #FFFFFF !important;
+            cursor: not-allowed;
+            box-shadow: none !important;
+        }
+        
+        /* ==========================================
+           TABLAS
+           ========================================== */
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;}
         th, td { padding: 15px; border-bottom: 1px solid #e2e8f0; text-align: left; }
         th { background-color: #f8fafc; color: #475569; text-transform: uppercase; font-size: 12px; }
         .alert { padding: 15px; border-radius: 4px; margin-bottom: 20px; font-weight: bold; }
         .alert-error { background-color: #fee2e2; color: #b91c1c; }
         .alert-success { background-color: #d1fae5; color: #047857; }
+
+        .logo {
+    border-bottom: none !important; /* Quitamos la línea divisoria */
+    padding: 20px 20px 10px 20px !important; /* Ajustamos el padding */
+}
+
     </style>
 </head>
 <body>
 
     <div class="sidebar">
-        <div class="logo">NUTRICAN<br><span>Premium C.A.</span></div>
+        <div class="logo" style="display: flex; align-items: center; gap: 14px; border-bottom: 1px solid #E5E7EB; padding: 20px 20px 15px 20px; text-decoration: none;">
+    <!-- Contenedor cuadrado azul -->
+    <div style="background-color: #1A7BDA; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <!-- SVG EXACTO DEL LOGIN (Escalado y color blanco) -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width: 24px; height: 24px;">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5"/>
+            <path d="M2 12l10 5 10-5"/>
+        </svg>
+    </div>
+    
+    <!-- Texto del logo -->
+    <div style="display: flex; flex-direction: column; justify-content: center;">
+        <span style="color: #1A1A1A; font-size: 20px; font-weight: 800; letter-spacing: 1px; line-height: 1.2;">NUTRICAN</span>
+        <span style="color: #8B8D96; font-size: 13px; font-weight: normal; letter-spacing: 1.5px; margin-top: 2px;">Premium C.A.</span>
+    </div>
+</div>
+        
         <ul class="menu">
-            <li><a href="/dashboard">📊 Panel de Resumen</a></li>
-            <li><a href="/entradas">📦 Registrar Entrada (Lotes)</a></li>
-            <li><a href="/salidas">🛒 Registrar Venta (Facturación)</a></li>
-            <li><a href="/inventario">📋 Consultar Inventario</a></li>
+            <li>
+                <a href="/dashboard">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>
+                        <path d="M22 12A10 10 0 0 0 12 2v10z"/>
+                    </svg>
+                    Panel de Resumen
+                </a>
+            </li>
+            <li>
+                <a href="/entradas">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12.89 1.45l8 4A2 2 0 0 1 22 7.24v9.53a2 2 0 0 1-1.11 1.79l-8 4a2 2 0 0 1-1.78 0l-8-4A2 2 0 0 1 2 16.77V7.24a2 2 0 0 1 1.11-1.79l8-4a2 2 0 0 1 1.78 0z"/>
+                        <polyline points="2.32 6.16 12 11 21.68 6.16"/>
+                        <line x1="12" y1="22" x2="12" y2="11"/>
+                        <line x1="7" y1="13.5" x2="7" y2="17.5"/>
+                    </svg>
+                    Registrar Entrada (Lotes)
+                </a>
+            </li>
+            <li>
+                <a href="/salidas">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="9" cy="21" r="1"/>
+                        <circle cx="20" cy="21" r="1"/>
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                    </svg>
+                    Registrar Venta (Facturación)
+                </a>
+            </li>
+            <li>
+                <a href="/inventario">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                        <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                        <line x1="9" y1="11" x2="15" y2="11"/>
+                        <line x1="9" y1="15" x2="15" y2="15"/>
+                        <line x1="9" y1="19" x2="13" y2="19"/>
+                    </svg>
+                    Consultar Inventario
+                </a>
+            </li>
         </ul>
-        <a href="/logout" class="logout">Cerrar Sesión</a>
+
+        <a href="/logout" class="logout">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Cerrar Sesión
+        </a>
     </div>
 
     <div class="main-content">
         <div class="top-bar">
-            <h2 style="margin:0; color:#334155;">{% block title %}{% endblock %}</h2>
+            <h2>{% block title %}{% endblock %}</h2>
             <div>Usuario Activo: <strong>{{ usuario }}</strong></div>
         </div>
         

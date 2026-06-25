@@ -96,14 +96,18 @@
     </table>
     
     <div style="margin-top: 8px; text-align: right; font-size: 13px;">
-        {% if page > 1 %}
-            <a href="{{ url_for('dashboard', page=page-1) }}" style="padding: 4px 10px; background: #e2e8f0; border-radius: 4px; text-decoration: none; color: #334155; font-weight: bold;">&laquo; Anterior</a>
+        <!-- SOLUCIÓN: Definimos valores por defecto por si app.py olvida enviar 'page' o 'total_pages' -->
+        {% set safe_page = page | default(1) | int %}
+        {% set safe_total = total_pages | default(1) | int %}
+        
+        {% if safe_page > 1 %}
+            <a href="{{ url_for('dashboard', page=safe_page-1) }}" style="padding: 4px 10px; background: #e2e8f0; border-radius: 4px; text-decoration: none; color: #334155; font-weight: bold;">&laquo; Anterior</a>
         {% endif %}
         
-        <span style="margin: 0 15px; color: #64748b; font-weight: bold;">Página {{ page }} de {{ total_pages }}</span>
+        <span style="margin: 0 15px; color: #64748b; font-weight: bold;">Página {{ safe_page }} de {{ safe_total }}</span>
         
-        {% if page < total_pages %}
-            <a href="{{ url_for('dashboard', page=page+1) }}" style="padding: 4px 10px; background: #e2e8f0; border-radius: 4px; text-decoration: none; color: #334155; font-weight: bold;">Siguiente &raquo;</a>
+        {% if safe_page < safe_total %}
+            <a href="{{ url_for('dashboard', page=safe_page+1) }}" style="padding: 4px 10px; background: #e2e8f0; border-radius: 4px; text-decoration: none; color: #334155; font-weight: bold;">Siguiente &raquo;</a>
         {% endif %}
     </div>
 </div>

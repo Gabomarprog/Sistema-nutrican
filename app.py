@@ -38,10 +38,10 @@ def init_db():
                     fecha_hora TEXT NOT NULL,
                     descripcion TEXT)''')
     
-    c.execute("SELECT * FROM usuarios WHERE username = 'Eileen'")
+    c.execute("SELECT * FROM usuarios WHERE username = 'Heileen'")
     if not c.fetchone():
         c.execute("INSERT INTO usuarios (username, password_hash) VALUES (?, ?)", 
-                  ('Eileen', generate_password_hash('Leen123*')))
+                  ('Heileen', generate_password_hash('Leen123*')))
     conn.commit()
     conn.close()
 

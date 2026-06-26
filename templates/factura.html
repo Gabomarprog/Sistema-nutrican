@@ -11,6 +11,7 @@
         th { background-color: #f8fafc; }
         .total { font-size: 24px; font-weight: bold; text-align: right; color: #10b981; margin-bottom: 5px; }
         .btn { display: inline-block; padding: 10px 20px; background: #2563eb; color: white; text-decoration: none; border-radius: 4px; margin-top: 20px; margin-right: 10px; }
+        .btn-danger { background: #dc2626; }
     </style>
 </head>
 <body>
@@ -39,20 +40,23 @@
 
     <div class="total">TOTAL USD: ${{ "%.2f"|format(f[6]) }}</div>
     
-    {% if f[9] and f[9] > 0 %}
+    <!-- NUEVO BLOQUE: TOTAL EN BOLÍVARES -->
+    {% set tasa = f[9]|default(0)|float %}
+    {% if tasa > 0 %}
     <div style="text-align: right; margin-top: 10px;">
         <div style="font-size: 22px; font-weight: bold; color: #334155;">
-            TOTAL VES: {{ (f[6] * f[9]) | format_ve }} Bs
+            TOTAL VES: {{ (f[6] * tasa) | format_ve }} Bs
         </div>
         <div style="font-size: 14px; color: #94a3b8; margin-top: 4px;">
-            (Calculado a tasa BCV: {{ "%.2f"|format(f[9]) }})
+            (Calculado a tasa BCV: {{ "%.2f"|format(tasa) }})
         </div>
     </div>
     {% endif %}
+    
     {% if not is_pdf %}
     <div style="margin-top: 30px;">
         <a href="/dashboard" class="btn">Cerrar Factura y Volver</a>
-        <a href="/factura/{{ f[0] }}/pdf" class="btn" style="background:#dc2626;">Imprimir PDF</a>
+        <a href="/factura/{{ f[0] }}/pdf" class="btn btn-danger">Imprimir PDF</a>
     </div>
     {% endif %}
 </body>

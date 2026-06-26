@@ -43,26 +43,22 @@
         margin: 0 !important;
     }
 
-    
-
     /* Estilo del botón */
     .btn-devolver {
-        background-color: #FF9A2E; /* Naranja vibrante */
+        background-color: #ff9800;
         color: white;
         border: none;
-        padding: 3px 12px; /* Más pequeño para no estirar la fila */
+        padding: 3px 12px;
         border-radius: 10px;
         cursor: pointer;
         font-size: 13px;
         font-weight: bold;
     }
-    .btn-devolver:hover { background-color: #FC8403; }
+    .btn-devolver:hover { background-color: #e68900; }
 
-    /* Estilo de la tabla para quitar el exceso de grosor */
     table { width: 100%; border-collapse: collapse; }
-    td, th { padding: 8px 10px; } /* Espaciado reducido para que no sea tan alta */
+    td, th { padding: 8px 10px; }
     
-    /* El Modal (Capa fija) */
     .modal-fondo {
         display: none; position: fixed; z-index: 1000;
         left: 0; top: 0; width: 100%; height: 100%;
@@ -72,8 +68,6 @@
         background-color: white; margin: 10% auto; padding: 20px;
         width: 350px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
-
-    /* Botón Cancelar */
     .btn-cancelar {
         background-color: #f8f9fa;
         color: #333;
@@ -84,10 +78,8 @@
         font-weight: bold;
     }
     .btn-cancelar:hover { background-color: #e2e6ea; }
-
-    /* Botón Confirmar */
     .btn-confirmar {
-        background-color: #FF9A2E;
+        background-color: #dc3545;
         color: white;
         border: none;
         padding: 8px 15px;
@@ -95,10 +87,7 @@
         cursor: pointer;
         font-weight: bold;
     }
-    .btn-confirmar:hover { background-color: #FC5E03; }
-
-
-    
+    .btn-confirmar:hover { background-color: #c82333; }
 </style>
 
 <div style="display: flex; gap: 15px; margin-bottom: 10px;">
@@ -117,12 +106,13 @@
     <table class="tabla-perfecta">
         <thead>
             <tr>
-                <th style="width: 18%;">Código de Lote</th>
-                <th style="width: 32%;">Producto</th>
-                <th style="width: 18%;">Stock Físico</th>
-                <th style="width: 14%;">Costo Unitario</th>
-                <th style="width: 18%;">Fecha de Ingreso</th>
-                <th style="width: 18%;">Acción</th>
+                <th style="width: 16%;">Código de Lote</th>
+                <th style="width: 28%;">Producto</th>
+                <th style="width: 12%;">Stock Físico</th>
+                <th style="width: 12%;">Costo Unitario</th>
+                <th style="width: 12%;">Costo en Bs</th>   <!-- NUEVA COLUMNA -->
+                <th style="width: 14%;">Fecha de Ingreso</th>
+                <th style="width: 16%;">Acción</th>
             </tr>
         </thead>
         <tbody>
@@ -132,16 +122,23 @@
                 <td title="{{ lote[1] }}">{{ lote[1] }}</td>
                 <td style="color: #2563eb; font-weight: bold;">{{ lote[2] }} sacos</td>
                 <td>${{ "%.2f"|format(lote[3]) }}</td>
+                <td>
+                    {% if tasa_actual and tasa_actual > 0 %}
+                        {{ (lote[3] * tasa_actual) | format_ve }} Bs
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
                 <td>{{ lote[4] }}</td>
                 <td>
-    <button class="btn-devolver" onclick="prepararDevolucion('{{ lote[0] }}', {{ lote[2] }})">
-        Devolver
-    </button>
-</td>
+                    <button class="btn-devolver" onclick="prepararDevolucion('{{ lote[0] }}', {{ lote[2] }})">
+                        Devolver
+                    </button>
+                </td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="5" style="text-align: center; color: #64748b;">Inventario vacío. No hay lotes registrados.</td>
+                <td colspan="7" style="text-align: center; color: #64748b;">Inventario vacío. No hay lotes registrados.</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -184,12 +181,10 @@
         document.getElementById('input_id_lote').value = id;
         document.getElementById('input_max_qty').value = maxQty;
         document.getElementById('input_max_qty').max = maxQty;
-        // Mostramos el modal cambiando el display a block
         document.getElementById('modalDevolucion').style.display = 'block';
     }
 
     function cerrarModal() {
-        // Ocultamos el modal
         document.getElementById('modalDevolucion').style.display = 'none';
     }
 </script>

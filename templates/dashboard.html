@@ -60,12 +60,13 @@
     <table class="tabla-perfecta">
         <thead>
             <tr>
-                <th style="width: 18%;">Fecha</th>
+                <th style="width: 16%;">Fecha</th>        <!-- reducido de 18% a 16% -->
                 <th style="width: 10%;">Tipo</th>
                 <th style="width: 12%;">Lote</th>
-                <th style="width: 12%;">Cantidad</th>
-                <th style="width: 13%;">Total</th>
-                <th style="width: 35%;">Detalles</th>
+                <th style="width: 10%;">Cantidad</th>     <!-- reducido de 12% a 10% -->
+                <th style="width: 11%;">Total USD</th>    <!-- renombrado para claridad -->
+                <th style="width: 12%;">Total Bs</th>     <!-- NUEVA COLUMNA -->
+                <th style="width: 29%;">Detalles</th>     <!-- reducido de 35% a 29% -->
             </tr>
         </thead>
         <tbody>
@@ -74,15 +75,23 @@
                 <td>{{ mov[8] }}</td>
                 <td>
                     <span style="padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; 
-    background: {{ '#dcfce7' if mov[3] == 'Salida' else ('#FFC68A' if mov[3] == 'Devolución' else '#dbeafe') }}; 
-    color: {{ '#166534' if mov[3] == 'Salida' else ('#FC5E03' if mov[3] == 'Devolución' else '#1e40af') }}">
+    background: {{ '#dcfce7' if mov[3] == 'Salida' else ('#fecaca' if mov[3] == 'Devolución' else '#dbeafe') }}; 
+    color: {{ '#166534' if mov[3] == 'Salida' else ('#991b1b' if mov[3] == 'Devolución' else '#1e40af') }}">
     {{ mov[3] }}
 </span>
                 </td>
                 <td>{{ mov[2] }}</td>
                 <td>{{ mov[5] }}</td>
                 <td>${{ "%.2f"|format(mov[7]) }}</td>
-                
+                <!-- NUEVA CELDA: Total Bs -->
+                <td>
+                    {% set tasa = mov[10]|default(0)|float %}
+                    {% if tasa > 0 %}
+                        {{ (mov[7] * tasa) | format_ve }} Bs
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
                 <td title="{% if mov[3] == 'Salida' %}Se vendió a {{ mov[9] }}{% else %}{{ mov[9] }}{% endif %}">
                     {% if mov[3] == 'Salida' %}
                         Se vendió a {{ mov[9] }}
@@ -96,18 +105,14 @@
     </table>
     
     <div style="margin-top: 8px; text-align: right; font-size: 13px;">
-        <!-- SOLUCIÓN: Definimos valores por defecto por si app.py olvida enviar 'page' o 'total_pages' -->
-        {% set safe_page = page | default(1) | int %}
-        {% set safe_total = total_pages | default(1) | int %}
-        
-        {% if safe_page > 1 %}
-            <a href="{{ url_for('dashboard', page=safe_page-1) }}" style="padding: 4px 10px; background: #e2e8f0; border-radius: 4px; text-decoration: none; color: #334155; font-weight: bold;">&laquo; Anterior</a>
+        {% if page > 1 %}
+            <a href="{{ url_for('dashboard', page=page-1) }}" style="padding: 4px 10px; background: #e2e8f0; border-radius: 4px; text-decoration: none; color: #334155; font-weight: bold;">&laquo; Anterior</a>
         {% endif %}
         
-        <span style="margin: 0 15px; color: #64748b; font-weight: bold;">Página {{ safe_page }} de {{ safe_total }}</span>
+        <span style="margin: 0 15px; color: #64748b; font-weight: bold;">Página {{ page }} de {{ total_pages }}</span>
         
-        {% if safe_page < safe_total %}
-            <a href="{{ url_for('dashboard', page=safe_page+1) }}" style="padding: 4px 10px; background: #e2e8f0; border-radius: 4px; text-decoration: none; color: #334155; font-weight: bold;">Siguiente &raquo;</a>
+        {% if page < total_pages %}
+            <a href="{{ url_for('dashboard', page=page+1) }}" style="padding: 4px 10px; background: #e2e8f0; border-radius: 4px; text-decoration: none; color: #334155; font-weight: bold;">Siguiente &raquo;</a>
         {% endif %}
     </div>
 </div>

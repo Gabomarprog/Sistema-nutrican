@@ -309,6 +309,8 @@ def descargar_pdf(id_factura):
     response.headers['Content-Disposition'] = f'attachment; filename=Factura_{id_factura}.pdf'
     return response
 
+# Inicializar la base de datos al cargar la aplicación (para producción con Gunicorn)
+init_db()
+
 if __name__ == '__main__':
-    init_db()
     app.run(debug=True, port=5000)

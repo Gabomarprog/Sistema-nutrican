@@ -4,13 +4,25 @@ import sqlite3
 from datetime import datetime
 import pdfkit
 import os
+import requests
 
 app = Flask(__name__)
-app.secret_key = "nutrican_premium_key_2026"
 
-# FIX 1: Crear una ruta absoluta para que la base de datos funcione en Linux (Render) y Windows
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_NAME = os.path.join(BASE_DIR, "inventario_fifo.db")
+@app.template_filter('format_ve')
+def format_ve(value):
+    try:
+        entero, decimal = f"{value:.2f}".split('.')
+        entero_con_puntos = ''
+        for i, c in enumerate(reversed(entero)):
+            if i > 0 and i % 3 == 0:
+                entero_con_puntos = '.' + entero_con_puntos
+            entero_con_puntos = c + entero_con_puntos
+        return f"{entero_con_puntos},{decimal}"
+    except:
+        return f"{value:.2f}".replace('.', ',')
+
+app.secret_key = "nutrican_premium_key_2026"
+DB_NAME = "inventario_fifo.db"
 REGISTROS_POR_PAGINA = 10
 
 def init_db():
@@ -38,6 +50,11 @@ def init_db():
                     fecha_hora TEXT NOT NULL,
                     descripcion TEXT)''')
     
+    try:
+        c.execute("ALTER TABLE movimientos ADD COLUMN tasa_aplicada REAL DEFAULT 0.0")
+    except sqlite3.OperationalError:
+        pass
+
     c.execute("SELECT * FROM usuarios WHERE username = 'Heileen'")
     if not c.fetchone():
         c.execute("INSERT INTO usuarios (username, password_hash) VALUES (?, ?)", 
@@ -45,9 +62,23 @@ def init_db():
     conn.commit()
     conn.close()
 
-# FIX 2: Ejecutar init_db globalmente. Gunicorn ignora el bloque __main__, 
-# por lo que esto es obligatorio para que Render cree las tablas.
-init_db()
+def obtener_tasa_del_dia():
+    try:
+        response = requests.get('https://api-dolar-intermediario.vercel.app/api/tasa', timeout=5)
+        if response.status_code == 200:
+            datos = response.json()
+            if isinstance(datos, dict) and 'current' in datos:
+                tasa = datos['current'].get('usd')
+                if tasa is not None:
+                    return float(tasa)
+            if isinstance(datos, dict):
+                for key in ['bcv', 'tasa', 'precio']:
+                    if key in datos:
+                        return float(datos[key])
+        return 0.0
+    except Exception as e:
+        print(f"Error obteniendo tasa: {e}")
+        return 0.0
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
@@ -75,7 +106,7 @@ def dashboard():
     if 'username' not in session: return redirect(url_for('login'))
     
     page = int(request.args.get('page', 1))
-    per_page = REGISTROS_POR_PAGINA 
+    per_page = REGISTROS_POR_PAGINA
     offset = (page - 1) * per_page
     
     conn = sqlite3.connect(DB_NAME)
@@ -122,8 +153,10 @@ def inventario():
     
     total_pages = (total_lotes + per_page - 1) // per_page
     if total_pages == 0: total_pages = 1
+
+    tasa_actual = obtener_tasa_del_dia()
     
-    return render_template('inventario.html', lotes=lotes, usuario=session['username'], page=page, total_pages=total_pages, stock=total_stock, ventas=ventas_totales)
+    return render_template('inventario.html', lotes=lotes, usuario=session['username'], page=page, total_pages=total_pages, stock=total_stock, ventas=ventas_totales, tasa_actual=tasa_actual)
 
 @app.route('/entradas', methods=['GET', 'POST'])
 def entradas():
@@ -145,15 +178,17 @@ def entradas():
         monto_total = cantidad * precio_unidad
         fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
+        tasa_actual = obtener_tasa_del_dia()
+        
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
         try:
             c.execute("INSERT INTO lotes (id_lote, producto, cantidad, precio_unidad, fecha_ingreso) VALUES (?, ?, ?, ?, ?)",
                       (id_lote_final, producto, cantidad, precio_unidad, fecha_actual))
             
-            c.execute("""INSERT INTO movimientos (id_usuario, id_lote, tipo, categoria, cantidad, precio_unidad, monto_total, fecha_hora, descripcion) 
-                          VALUES (?, ?, 'Entrada', 'Abastecimiento', ?, ?, ?, ?, ?)""",
-                      (session['username'], id_lote_final, cantidad, precio_unidad, monto_total, fecha_actual, descripcion))
+            c.execute("""INSERT INTO movimientos (id_usuario, id_lote, tipo, categoria, cantidad, precio_unidad, monto_total, fecha_hora, descripcion, tasa_aplicada) 
+                          VALUES (?, ?, 'Entrada', 'Abastecimiento', ?, ?, ?, ?, ?, ?)""",
+                      (session['username'], id_lote_final, cantidad, precio_unidad, monto_total, fecha_actual, descripcion, tasa_actual))
             
             conn.commit()
             flash(f"Lote {id_lote_final} registrado.", "success")
@@ -176,14 +211,19 @@ def salidas():
         descripcion = request.form['descripcion']
         monto_total = cantidad_vender * precio_unidad
         fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
         c.execute("SELECT cantidad FROM lotes WHERE id_lote = ?", (id_lote,))
         lote = c.fetchone()
         if lote and lote[0] >= cantidad_vender:
             nueva_cantidad = lote[0] - cantidad_vender
             c.execute("UPDATE lotes SET cantidad = ? WHERE id_lote = ?", (nueva_cantidad, id_lote))
-            c.execute("""INSERT INTO movimientos (id_usuario, id_lote, tipo, categoria, cantidad, precio_unidad, monto_total, fecha_hora, descripcion) 
-                         VALUES (?, ?, 'Salida', 'Venta', ?, ?, ?, ?, ?)""",
-                      (session['username'], id_lote, cantidad_vender, precio_unidad, monto_total, fecha_actual, descripcion))
+            
+            tasa_actual = obtener_tasa_del_dia()
+            
+            c.execute("""INSERT INTO movimientos (id_usuario, id_lote, tipo, categoria, cantidad, precio_unidad, monto_total, fecha_hora, descripcion, tasa_aplicada) 
+                         VALUES (?, ?, 'Salida', 'Venta', ?, ?, ?, ?, ?, ?)""",
+                      (session['username'], id_lote, cantidad_vender, precio_unidad, monto_total, fecha_actual, descripcion, tasa_actual))
+            
             id_factura = c.lastrowid
             conn.commit()
             conn.close()
@@ -202,7 +242,7 @@ def ver_factura(id_factura):
     if 'username' not in session: return redirect(url_for('login'))
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute("""SELECT m.id_movimiento, m.fecha_hora, m.id_usuario, m.descripcion, m.cantidad, m.precio_unidad, m.monto_total, l.producto, m.id_lote 
+    c.execute("""SELECT m.id_movimiento, m.fecha_hora, m.id_usuario, m.descripcion, m.cantidad, m.precio_unidad, m.monto_total, l.producto, m.id_lote, m.tasa_aplicada 
                  FROM movimientos m JOIN lotes l ON m.id_lote = l.id_lote WHERE m.id_movimiento = ?""", (id_factura,))
     datos = c.fetchone()
     conn.close()
@@ -231,9 +271,15 @@ def procesar_devolucion():
         c.execute("UPDATE lotes SET cantidad = cantidad - ? WHERE id_lote = ?", 
                   (cantidad_devuelta, id_lote))
         
-        c.execute("""INSERT INTO movimientos (id_usuario, id_lote, tipo, categoria, cantidad, precio_unidad, monto_total, fecha_hora, descripcion) 
-                     VALUES (?, ?, 'Devolución', 'Devolución Lote', ?, ?, ?, ?, ?)""",
-                  (session['username'], id_lote, cantidad_devuelta, precio_unidad, monto_total, fecha_actual, motivo))
+        # === OBTENER TASA PARA GUARDAR EN EL MOVIMIENTO ===
+        tasa_actual = obtener_tasa_del_dia()
+        # ================================================
+        
+        # === INSERT CON TASA_AAPLICADA ===
+        c.execute("""INSERT INTO movimientos (id_usuario, id_lote, tipo, categoria, cantidad, precio_unidad, monto_total, fecha_hora, descripcion, tasa_aplicada) 
+                     VALUES (?, ?, 'Devolución', 'Devolución Lote', ?, ?, ?, ?, ?, ?)""",
+                  (session['username'], id_lote, cantidad_devuelta, precio_unidad, monto_total, fecha_actual, motivo, tasa_actual))
+        # =================================
         
         conn.commit()
         flash(f"Devolución procesada correctamente para {id_lote}.", "success")
@@ -247,22 +293,16 @@ def descargar_pdf(id_factura):
     
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute("""SELECT m.id_movimiento, m.fecha_hora, m.id_usuario, m.descripcion, m.cantidad, m.precio_unidad, m.monto_total, l.producto, m.id_lote 
+    c.execute("""SELECT m.id_movimiento, m.fecha_hora, m.id_usuario, m.descripcion, m.cantidad, m.precio_unidad, m.monto_total, l.producto, m.id_lote, m.tasa_aplicada 
                  FROM movimientos m JOIN lotes l ON m.id_lote = l.id_lote WHERE m.id_movimiento = ?""", (id_factura,))
     datos = c.fetchone()
     conn.close()
     
     html = render_template('factura.html', f=datos, is_pdf=True)
     
-    # FIX 3: Adaptar la ruta de wkhtmltopdf según el sistema operativo
-    if os.name == 'nt':  # Si estás ejecutando en Windows (tu equipo local)
-        ruta_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
-        config = pdfkit.configuration(wkhtmltopdf=ruta_wkhtmltopdf)
-        pdf = pdfkit.from_string(html, False, configuration=config)
-    else:  # Si estás en Linux (Render)
-        # En Render necesitarás tener wkhtmltopdf instalado en el entorno.
-        # Por ahora esto evitará el error de ruta estricta de Windows.
-        pdf = pdfkit.from_string(html, False)
+    ruta_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+    config = pdfkit.configuration(wkhtmltopdf=ruta_wkhtmltopdf)
+    pdf = pdfkit.from_string(html, False, configuration=config)
     
     response = make_response(pdf)
     response.headers['Content-Type'] = 'application/pdf'
@@ -270,4 +310,5 @@ def descargar_pdf(id_factura):
     return response
 
 if __name__ == '__main__':
+    init_db()
     app.run(debug=True, port=5000)

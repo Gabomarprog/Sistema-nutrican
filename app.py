@@ -5,9 +5,11 @@ from datetime import datetime
 import pdfkit
 import os
 import requests
+import platform
 
 app = Flask(__name__)
 
+# ===== FILTRO PARA FORMATO VENEZOLANO =====
 @app.template_filter('format_ve')
 def format_ve(value):
     try:
@@ -21,10 +23,31 @@ def format_ve(value):
     except:
         return f"{value:.2f}".replace('.', ',')
 
+# ===== CONFIGURACIÓN =====
 app.secret_key = "nutrican_premium_key_2026"
 DB_NAME = "inventario_fifo.db"
 REGISTROS_POR_PAGINA = 10
 
+# ===== FUNCIÓN PARA OBTENER TASA DEL DÍA =====
+def obtener_tasa_del_dia():
+    try:
+        response = requests.get('https://api-dolar-intermediario.vercel.app/api/tasa', timeout=5)
+        if response.status_code == 200:
+            datos = response.json()
+            if isinstance(datos, dict) and 'current' in datos:
+                tasa = datos['current'].get('usd')
+                if tasa is not None:
+                    return float(tasa)
+            if isinstance(datos, dict):
+                for key in ['bcv', 'tasa', 'precio']:
+                    if key in datos:
+                        return float(datos[key])
+        return 0.0
+    except Exception as e:
+        print(f"Error obteniendo tasa: {e}")
+        return 0.0
+
+# ===== INICIALIZACIÓN DE BASE DE DATOS =====
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
@@ -50,6 +73,7 @@ def init_db():
                     fecha_hora TEXT NOT NULL,
                     descripcion TEXT)''')
     
+    # Añadir columna tasa_aplicada si no existe
     try:
         c.execute("ALTER TABLE movimientos ADD COLUMN tasa_aplicada REAL DEFAULT 0.0")
     except sqlite3.OperationalError:
@@ -62,24 +86,10 @@ def init_db():
     conn.commit()
     conn.close()
 
-def obtener_tasa_del_dia():
-    try:
-        response = requests.get('https://api-dolar-intermediario.vercel.app/api/tasa', timeout=5)
-        if response.status_code == 200:
-            datos = response.json()
-            if isinstance(datos, dict) and 'current' in datos:
-                tasa = datos['current'].get('usd')
-                if tasa is not None:
-                    return float(tasa)
-            if isinstance(datos, dict):
-                for key in ['bcv', 'tasa', 'precio']:
-                    if key in datos:
-                        return float(datos[key])
-        return 0.0
-    except Exception as e:
-        print(f"Error obteniendo tasa: {e}")
-        return 0.0
+# Ejecutar init_db al cargar la aplicación (necesario para Gunicorn en producción)
+init_db()
 
+# ===== RUTAS =====
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -153,7 +163,7 @@ def inventario():
     
     total_pages = (total_lotes + per_page - 1) // per_page
     if total_pages == 0: total_pages = 1
-
+    
     tasa_actual = obtener_tasa_del_dia()
     
     return render_template('inventario.html', lotes=lotes, usuario=session['username'], page=page, total_pages=total_pages, stock=total_stock, ventas=ventas_totales, tasa_actual=tasa_actual)
@@ -271,15 +281,11 @@ def procesar_devolucion():
         c.execute("UPDATE lotes SET cantidad = cantidad - ? WHERE id_lote = ?", 
                   (cantidad_devuelta, id_lote))
         
-        # === OBTENER TASA PARA GUARDAR EN EL MOVIMIENTO ===
         tasa_actual = obtener_tasa_del_dia()
-        # ================================================
         
-        # === INSERT CON TASA_AAPLICADA ===
         c.execute("""INSERT INTO movimientos (id_usuario, id_lote, tipo, categoria, cantidad, precio_unidad, monto_total, fecha_hora, descripcion, tasa_aplicada) 
                      VALUES (?, ?, 'Devolución', 'Devolución Lote', ?, ?, ?, ?, ?, ?)""",
                   (session['username'], id_lote, cantidad_devuelta, precio_unidad, monto_total, fecha_actual, motivo, tasa_actual))
-        # =================================
         
         conn.commit()
         flash(f"Devolución procesada correctamente para {id_lote}.", "success")
@@ -300,7 +306,13 @@ def descargar_pdf(id_factura):
     
     html = render_template('factura.html', f=datos, is_pdf=True)
     
-    ruta_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+    # Configurar ruta de wkhtmltopdf según sistema operativo
+    if platform.system() == 'Windows':
+        ruta_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+    else:
+        # En Linux (Render) wkhtmltopdf se instala en /usr/local/bin/ o /usr/bin/
+        ruta_wkhtmltopdf = '/usr/local/bin/wkhtmltopdf'
+    
     config = pdfkit.configuration(wkhtmltopdf=ruta_wkhtmltopdf)
     pdf = pdfkit.from_string(html, False, configuration=config)
     
@@ -309,8 +321,6 @@ def descargar_pdf(id_factura):
     response.headers['Content-Disposition'] = f'attachment; filename=Factura_{id_factura}.pdf'
     return response
 
-# Inicializar la base de datos al cargar la aplicación (para producción con Gunicorn)
-init_db()
-
 if __name__ == '__main__':
+    # No llamar a init_db() aquí porque ya se ejecutó al importar
     app.run(debug=True, port=5000)

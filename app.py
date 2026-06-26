@@ -5,10 +5,12 @@ from datetime import datetime
 import pdfkit
 import os
 
-
 app = Flask(__name__)
 app.secret_key = "nutrican_premium_key_2026"
-DB_NAME = "inventario_fifo.db"
+
+# FIX 1: Crear una ruta absoluta para que la base de datos funcione en Linux (Render) y Windows
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_NAME = os.path.join(BASE_DIR, "inventario_fifo.db")
 REGISTROS_POR_PAGINA = 10
 
 def init_db():
@@ -35,12 +37,17 @@ def init_db():
                     monto_total REAL NOT NULL,
                     fecha_hora TEXT NOT NULL,
                     descripcion TEXT)''')
-    c.execute("SELECT * FROM usuarios WHERE username = 'Heileen'")
+    
+    c.execute("SELECT * FROM usuarios WHERE username = 'Eileen'")
     if not c.fetchone():
         c.execute("INSERT INTO usuarios (username, password_hash) VALUES (?, ?)", 
-                  ('Heileen', generate_password_hash('Leen123*')))
+                  ('Eileen', generate_password_hash('Leen123*')))
     conn.commit()
     conn.close()
+
+# FIX 2: Ejecutar init_db globalmente. Gunicorn ignora el bloque __main__, 
+# por lo que esto es obligatorio para que Render cree las tablas.
+init_db()
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
@@ -67,9 +74,8 @@ def logout():
 def dashboard():
     if 'username' not in session: return redirect(url_for('login'))
     
-    # Lógica de paginación ajustada a 8 registros
     page = int(request.args.get('page', 1))
-    per_page = REGISTROS_POR_PAGINA # <--- Puedes cambiarlo a 9 aquí si lo deseas
+    per_page = REGISTROS_POR_PAGINA 
     offset = (page - 1) * per_page
     
     conn = sqlite3.connect(DB_NAME)
@@ -79,7 +85,6 @@ def dashboard():
     c.execute("SELECT SUM(monto_total) FROM movimientos WHERE tipo = 'Salida'")
     ventas_totales = c.fetchone()[0] or 0.0
     
-    # Consulta paginada
     c.execute("SELECT * FROM movimientos ORDER BY fecha_hora DESC LIMIT ? OFFSET ?", (per_page, offset))
     movimientos = c.fetchall()
     
@@ -96,7 +101,6 @@ def dashboard():
 def inventario():
     if 'username' not in session: return redirect(url_for('login'))
     
-    # Lógica de paginación con la variable global
     page = int(request.args.get('page', 1))
     per_page = REGISTROS_POR_PAGINA  
     offset = (page - 1) * per_page
@@ -104,13 +108,11 @@ def inventario():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
-    # SOLUCIÓN: Calculamos el stock y las ventas para que la plantilla no dé error
     c.execute("SELECT SUM(cantidad) FROM lotes")
     total_stock = c.fetchone()[0] or 0
     c.execute("SELECT SUM(monto_total) FROM movimientos WHERE tipo = 'Salida'")
     ventas_totales = c.fetchone()[0] or 0.0
     
-    # Consulta paginada de lotes
     c.execute("SELECT * FROM lotes WHERE cantidad > 0 ORDER BY fecha_ingreso ASC LIMIT ? OFFSET ?", (per_page, offset))
     lotes = c.fetchall()
     
@@ -121,26 +123,21 @@ def inventario():
     total_pages = (total_lotes + per_page - 1) // per_page
     if total_pages == 0: total_pages = 1
     
-    # Enviamos 'stock' y 'ventas' a la plantilla junto con los demás datos
     return render_template('inventario.html', lotes=lotes, usuario=session['username'], page=page, total_pages=total_pages, stock=total_stock, ventas=ventas_totales)
 
 @app.route('/entradas', methods=['GET', 'POST'])
 def entradas():
     if 'username' not in session: return redirect(url_for('login'))
     if request.method == 'POST':
-        # 1. Capturamos solo el número (ej: "2")
         numero_ingresado = request.form['id_lote']
         
-        # 2. Generamos la nomenclatura automática
         meses_abrev = {
             1: 'ene', 2: 'feb', 3: 'mar', 4: 'abr', 5: 'may', 6: 'jun', 
             7: 'jul', 8: 'ago', 9: 'sep', 10: 'oct', 11: 'nov', 12: 'dic'
         }
         mes_actual = datetime.now().month
-        # Crea el formato: Lote-jun-2
         id_lote_final = f"Lote-{meses_abrev[mes_actual]}-{numero_ingresado}"
         
-        # El resto de los datos se mantienen igual
         producto = request.form['producto']
         cantidad = int(request.form['cantidad'])
         precio_unidad = float(request.form['precio_unidad'])
@@ -151,7 +148,6 @@ def entradas():
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
         try:
-            # 3. Guardamos id_lote_final en lugar de numero_ingresado
             c.execute("INSERT INTO lotes (id_lote, producto, cantidad, precio_unidad, fecha_ingreso) VALUES (?, ?, ?, ?, ?)",
                       (id_lote_final, producto, cantidad, precio_unidad, fecha_actual))
             
@@ -167,6 +163,7 @@ def entradas():
             conn.close()
         return redirect(url_for('entradas'))
     return render_template('entradas.html', usuario=session['username'])
+
 @app.route('/salidas', methods=['GET', 'POST'])
 def salidas():
     if 'username' not in session: return redirect(url_for('login'))
@@ -211,6 +208,7 @@ def ver_factura(id_factura):
     conn.close()
     if not datos: return "Factura no encontrada."
     return render_template('factura.html', f=datos)
+
 @app.route('/procesar_devolucion', methods=['POST'])
 def procesar_devolucion():
     if 'username' not in session: return redirect(url_for('login'))
@@ -223,7 +221,6 @@ def procesar_devolucion():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
-    # 1. Buscamos el lote para obtener el precio unitario y calcular el monto
     c.execute("SELECT precio_unidad FROM lotes WHERE id_lote = ?", (id_lote,))
     lote = c.fetchone()
     
@@ -231,12 +228,9 @@ def procesar_devolucion():
         precio_unidad = lote[0]
         monto_total = cantidad_devuelta * precio_unidad
         
-        # 2. Restamos la cantidad del inventario
         c.execute("UPDATE lotes SET cantidad = cantidad - ? WHERE id_lote = ?", 
                   (cantidad_devuelta, id_lote))
         
-        # 3. Registramos el movimiento de "Devolución"
-        # Usamos el motivo como descripción
         c.execute("""INSERT INTO movimientos (id_usuario, id_lote, tipo, categoria, cantidad, precio_unidad, monto_total, fecha_hora, descripcion) 
                      VALUES (?, ?, 'Devolución', 'Devolución Lote', ?, ?, ?, ?, ?)""",
                   (session['username'], id_lote, cantidad_devuelta, precio_unidad, monto_total, fecha_actual, motivo))
@@ -260,9 +254,15 @@ def descargar_pdf(id_factura):
     
     html = render_template('factura.html', f=datos, is_pdf=True)
     
-    ruta_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
-    config = pdfkit.configuration(wkhtmltopdf=ruta_wkhtmltopdf)
-    pdf = pdfkit.from_string(html, False, configuration=config)
+    # FIX 3: Adaptar la ruta de wkhtmltopdf según el sistema operativo
+    if os.name == 'nt':  # Si estás ejecutando en Windows (tu equipo local)
+        ruta_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+        config = pdfkit.configuration(wkhtmltopdf=ruta_wkhtmltopdf)
+        pdf = pdfkit.from_string(html, False, configuration=config)
+    else:  # Si estás en Linux (Render)
+        # En Render necesitarás tener wkhtmltopdf instalado en el entorno.
+        # Por ahora esto evitará el error de ruta estricta de Windows.
+        pdf = pdfkit.from_string(html, False)
     
     response = make_response(pdf)
     response.headers['Content-Type'] = 'application/pdf'
@@ -270,5 +270,4 @@ def descargar_pdf(id_factura):
     return response
 
 if __name__ == '__main__':
-    init_db()
     app.run(debug=True, port=5000)

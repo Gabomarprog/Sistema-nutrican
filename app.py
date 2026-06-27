@@ -293,28 +293,32 @@ def procesar_devolucion():
     conn.close()
     return redirect(url_for('inventario'))
 
+import platform # Asegúrate de importar esto arriba del todo en tu app.py con los demás imports
+
 @app.route('/factura/<int:id_factura>/pdf')
 def descargar_pdf(id_factura):
     if 'username' not in session: return redirect(url_for('login'))
     
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute("""SELECT m.id_movimiento, m.fecha_hora, m.id_usuario, m.descripcion, m.cantidad, m.precio_unidad, m.monto_total, l.producto, m.id_lote, m.tasa_aplicada 
+    c.execute("""SELECT m.id_movimiento, m.fecha_hora, m.id_usuario, m.descripcion, 
+                 m.cantidad, m.precio_unidad, m.monto_total, l.producto, m.id_lote, m.tasa_aplicada 
                  FROM movimientos m JOIN lotes l ON m.id_lote = l.id_lote WHERE m.id_movimiento = ?""", (id_factura,))
     datos = c.fetchone()
     conn.close()
     
     html = render_template('factura.html', f=datos, is_pdf=True)
     
-    # Configurar ruta de wkhtmltopdf según sistema operativo
+    # === LA MAGIA PARA QUE NO FALLE EN RENDER ===
     if platform.system() == 'Windows':
+        # Si está en tu PC local, usa la ruta de Windows
         ruta_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+        config = pdfkit.configuration(wkhtmltopdf=ruta_wkhtmltopdf)
+        pdf = pdfkit.from_string(html, False, configuration=config)
     else:
-        # En Linux (Render) wkhtmltopdf se instala en /usr/local/bin/ o /usr/bin/
-        ruta_wkhtmltopdf = '/usr/local/bin/wkhtmltopdf'
-    
-    config = pdfkit.configuration(wkhtmltopdf=ruta_wkhtmltopdf)
-    pdf = pdfkit.from_string(html, False, configuration=config)
+        # Si está en Render (Linux), asume que está instalado en el sistema
+        pdf = pdfkit.from_string(html, False)
+    # ============================================
     
     response = make_response(pdf)
     response.headers['Content-Type'] = 'application/pdf'
